@@ -1,14 +1,14 @@
 import os
 import sys
+import time
+import json
+import requests
 import pathlib
 import datetime
-import time
 import subprocess
+from bs4 import BeautifulSoup
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-import requests
-import json
-from bs4 import BeautifulSoup
 
 DIR = (pathlib.Path(__file__).parent / "..").resolve()
 FILE = "atcoder.py"
@@ -18,10 +18,11 @@ db = (pathlib.Path(__file__).parent / "db").resolve()
 
 class AtCoder:
 	def __init__(self):
+		# atcoder login
+		url = "https://atcoder.jp/login"
 		user = os.environ['ATCODER_USERNAME']
 		passwd = os.environ['ATCODER_PASSWORD']
 		self.session = requests.session()
-		url = "https://atcoder.jp/login"
 		csrf = self.session.get(url).text.split('var csrfToken = "')[1].split('"')[0]
 		r = self.session.post(url+"?continue=https%3A%2F%2Fatcoder.jp%2F",data={
 			"username": user,
@@ -30,10 +31,9 @@ class AtCoder:
 		})
 
 	def get_input(self,path, contest, problem):
+		# problem url
 		url = f"https://atcoder.jp/contests/{contest}/tasks/{contest}_{problem}"
-		res = self.session.get(url)
-		# print(res)
-		soup = BeautifulSoup(res.text,features="html.parser")
+		soup = BeautifulSoup(self.session.get(url).text,features="html.parser")
 		sample = {"data": []}
 		for div in soup.find_all(class_="part"):
 			text = div.text.strip()
@@ -62,12 +62,12 @@ class MyHandler(PatternMatchingEventHandler):
 				problem = line[len("# PROBLEM: "):]
 		if contest==False or problem==False:
 			return False
-		# check cash
+
 		path = db / contest
+		# check cash
 		if not os.path.exists(str(path/problem)+".txt"):
 			# download input
 			os.makedirs(path, exist_ok=True)
-			print(contest,problem)
 			self.ac.get_input(str(path/problem)+".txt",contest,problem)
 
 		with open(str(path/problem)+".txt",mode="r") as f:
@@ -77,50 +77,52 @@ class MyHandler(PatternMatchingEventHandler):
 
 	def run(self, stdins):
 		for i,sample in enumerate(stdins):
-			print(f"[SAMPLE {i+1}]")
 			res = subprocess.run([PYTHONCMD, DIR/FILE, "DEBUG"],input=sample[0].replace("\r\n","\n"), capture_output=True, text=True)
+			# input
+			print(f"[SAMPLE {i+1}]")
 			input_data = [">>> INPUT"]+sample[0].split("\n")
-			out = [">>> YOUR OUTPUT"]
-			debug = [">>> DEBUG"]
+			out_y,out_d = [">>> YOUR OUTPUT"],[">>> DEBUG"]
 			for line in res.stdout.split("\n"):
 				if line.startswith("DEBUG: "):
-					debug.append(line[len("DEBUG: "):])
+					out_d.append(line[len("DEBUG: "):])
 				else:
-					out.append(line)
-			cout = [">>> CORRECT OUTPUT"]+sample[1].split("\n")
+					out_y.append(line)
+			out_c = [">>> CORRECT OUTPUT"]+sample[1].split("\n")
 
 			out1 = [i.rstrip() for i in sample[1].replace("\r\n","\n").rstrip().split("\n")]
-			out2 = [i.rstrip() for i in "\n".join(out[1:]).rstrip().split("\n")]
+			out2 = [i.rstrip() for i in "\n".join(out_y[1:]).rstrip().split("\n")]
 			result = out1==out2
 
 			if result:
-				output = ["CORRECT!"]
+				output = "CORRECT!"
 			else:
-				output = sample[0].split("\n")[:-1]+cout[:-1]+out[:-1]+debug
+				output = [
+					"\n".join(input_data).rstrip(),
+					"\n".join(out_c).rstrip(),
+					"\n".join(out_y).rstrip(),
+					"\n".join(out_d).rstrip(),
+				]
+				output = "\n".join(output)
 				if res.stderr!="":
 					print("ERROR!")
 					print(res.stderr)
-			for line in output:
-				if line!="\n":
-					print(line)
-			print()
+			print(output+"\n")
 
 	def on_modified(self, event):
 		with open(DIR / FILE, mode="r", encoding="utf-8") as f:
 			data = f.read()
+		# fileが更新されているか
 		if self.b_data==data:
 			return
+		self.b_data = data
 		os.system('cls')
 		print("modified",datetime.datetime.now())
 		print()
-		self.b_data = data
 		stdin = self.get_input(data)
 		if stdin==False:
 			print("INVALID CONFIG")
 		else:
 			self.run(stdin)
-
-
 
 if __name__ == "__main__":
 	os.system('cls')
