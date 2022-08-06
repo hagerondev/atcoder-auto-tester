@@ -23,4 +23,4 @@ atcoderのサンプルケースを自動で取得、正誤判定を行うツー�
 
 ## 見た目
 
-![image](https://user-images.githubusercontent.com/65499273/183258686-c41e81db-b5bd-4414-9360-78b05bea58d6.png)
+![image](https://user-images.githubusercontent.com/65499273/183260048-f85b7d6f-1ff4-450b-9ce4-c6c8b58db874.png)
