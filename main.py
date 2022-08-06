@@ -12,7 +12,8 @@ from watchdog.events import PatternMatchingEventHandler
 
 DIR = (pathlib.Path(__file__).parent / "..").resolve()
 FILE = "atcoder.py"
-PYTHONCMD = "python"
+COMMAND = ["python", DIR/FILE, "DEBUG"]
+COMMENTPREFIX = "#"
 
 db = (pathlib.Path(__file__).parent / "db").resolve()
 
@@ -56,10 +57,10 @@ class MyHandler(PatternMatchingEventHandler):
 		contest = False
 		problem = False
 		for line in data.split("\n"):
-			if line.startswith("# CONTEST: "):
-				contest = line[len("# CONTEST: "):]
-			elif line.startswith("# PROBLEM: "):
-				problem = line[len("# PROBLEM: "):]
+			if line.startswith(COMMENTPREFIX+" CONTEST: "):
+				contest = line[len(COMMENTPREFIX+" CONTEST: "):]
+			elif line.startswith(COMMENTPREFIX+" PROBLEM: "):
+				problem = line[len(COMMENTPREFIX+" PROBLEM: "):]
 		if contest==False or problem==False:
 			return False
 
@@ -77,7 +78,7 @@ class MyHandler(PatternMatchingEventHandler):
 
 	def run(self, stdins):
 		for i,sample in enumerate(stdins):
-			res = subprocess.run([PYTHONCMD, DIR/FILE, "DEBUG"],input=sample[0].replace("\r\n","\n"), capture_output=True, text=True)
+			res = subprocess.run(COMMAND,input=sample[0].replace("\r\n","\n"), capture_output=True, text=True)
 			# input
 			print(f"[SAMPLE {i+1}]")
 			input_data = [">>> INPUT"]+sample[0].split("\n")
